@@ -68,19 +68,24 @@ def cmd_report(args: argparse.Namespace) -> None:
     meetings = calendars.parse_meetings(
         [f.read_bytes() for f in feeds], window_start, window_end, my_emails=cfg.my_emails
     )
-    # Events with no other attendees (focus blocks, reminders) say nothing
-    # about coworkers; future meetings have no HR yet.
+    # Events with no other attendees (focus blocks, feeds that strip
+    # attendees like published Outlook calendars) can't be attributed to
+    # people, but still count as busy time excluded from baselines.
+    # Future meetings have no HR yet.
     now_ts = window_end.timestamp()
-    meetings = [m for m in meetings if m.attendees and m.end <= now_ts]
+    past = [m for m in meetings if m.end <= now_ts]
+    meetings = [m for m in past if m.attendees]
+    busy_only = [m for m in past if not m.attendees]
 
     samples = hrcache.load_samples(cfg.data_dir / "hr", args.days)
     if not samples:
         sys.exit("No heart-rate data cached — run `stress fetch` first.")
 
-    stats = compute_stats(meetings, samples)
+    stats = compute_stats(meetings, samples, extra_busy=busy_only)
     attendee_count = len({a for m in meetings for a in m.attendees})
     print(
-        f"STRESS REPORT — last {args.days} days · {len(meetings)} meetings, "
+        f"STRESS REPORT — last {args.days} days · {len(meetings)} meetings "
+        f"(+{len(busy_only)} without attendee info), "
         f"{len(stats)} scored (HR coverage) · {attendee_count} attendees · "
         f"{len(samples)} HR samples\n"
     )
@@ -88,8 +93,8 @@ def cmd_report(args: argparse.Namespace) -> None:
 
     cached_msgs = messages.load_messages(cfg.data_dir, args.days)
     if cached_msgs:
-        events = messages.to_events(cached_msgs, meetings)
-        msg_stats = compute_stats(events, samples, extra_busy=meetings)
+        events = messages.to_events(cached_msgs, past)
+        msg_stats = compute_stats(events, samples, extra_busy=past)
         print()
         print(render_messages(msg_stats, lam=args.ridge_lambda, min_meetings=args.min_meetings))
 

@@ -52,8 +52,10 @@ In `config.toml` you need:
 - **`calendars`** — one or more ICS sources:
   - **Google Calendar**: Settings → your calendar → *Integrate calendar* →
     "Secret address in iCal format"
-  - **Outlook / M365**: Settings → Calendar → *Shared calendars* → Publish a
-    calendar with **"Can view all details"** (required for attendees) → ICS link
+  - **Outlook / M365**: Settings → Calendar → *Shared calendars* → Publish →
+    ICS link. Note: Microsoft strips attendees from published feeds, so these
+    meetings only count as busy time (excluded from baselines) and can't feed
+    the leaderboard — that would require a Graph API app registration.
   - or a path to an exported `.ics` file
 
 `config.toml` and all fetched data stay in this repo, gitignored.
@@ -96,8 +98,8 @@ Report options: `--top N` (meetings shown), `--ridge-lambda X`,
   hint of signal, not a performance review input.
 - All-day HR granularity is roughly one sample per 1–2 minutes; very short
   meetings may be skipped for having too few samples.
-- Outlook published calendars only include attendees at the
-  "full details" permission level.
+- Outlook published calendars never include attendees; those meetings are
+  used as busy time only.
 
 ## Development
 
