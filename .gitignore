@@ -1,0 +1,12 @@
+# Private: secret calendar URLs and own email addresses
+config.toml
+# Private: cached heart-rate data and calendar feeds
+data/
+
+.claude/settings.local.json
+
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+dist/
