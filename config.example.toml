@@ -1,0 +1,18 @@
+# Copy to config.toml (gitignored) and fill in.
+
+# Your own addresses — removed from attendee lists so you don't rank yourself.
+me = ["you@company.com", "you@gmail.com"]
+
+# ICS sources: URLs or local .ics file paths.
+#  - Google Calendar: Settings → your calendar → "Secret address in iCal format"
+#  - Outlook: Settings → Calendar → Shared calendars → Publish ("Can view all details") → ICS link
+calendars = [
+    "https://calendar.google.com/calendar/ical/.../basic.ics",
+    "https://outlook.office365.com/owa/calendar/.../calendar.ics",
+]
+
+[analysis]
+# Ridge regularization strength; raise it if scores look unstable.
+lambda = 1.0
+# A person needs at least this many shared meetings to appear on the board.
+min_meetings = 3
