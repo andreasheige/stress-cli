@@ -28,12 +28,14 @@ def _get_client() -> Garmin:
 
     email = input("Garmin email: ")
     password = getpass("Garmin password: ")
-    client = Garmin(email=email, password=password, return_on_mfa=True)
-    result, state = client.login()
-    if result == "needs_mfa":
-        mfa_code = input("Garmin MFA code: ")
-        client.resume_login(state, mfa_code)
-    client.garth.dump(str(TOKEN_DIR))
+    client = Garmin(
+        email=email,
+        password=password,
+        prompt_mfa=lambda: input("Garmin MFA code: "),
+    )
+    # Passing the tokenstore makes the library persist tokens on success,
+    # so subsequent runs never hit the (rate-limited) SSO login again.
+    client.login(str(TOKEN_DIR))
     print(f"Logged in; tokens cached in {TOKEN_DIR}")
     return client
 
