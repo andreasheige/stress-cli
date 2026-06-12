@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from stress.analysis import compute_stats
 from stress.calendars import parse_meetings
-from stress.report import render
+from stress.report import Palette, render_board, render_meetings
 
 ICS = """BEGIN:VCALENDAR
 VERSION:2.0
@@ -55,11 +55,14 @@ def test_full_pipeline_blames_the_stressor():
     stats = compute_stats(meetings, synthetic_samples(meetings))
     assert len(stats) == 10
 
-    output = render(stats, lam=1.0, min_meetings=3, top=5)
+    pal = Palette(enabled=False)
+    table = render_meetings(stats, top=5, pal=pal)
+    assert "Design review" in table
 
-    assert "LEADERBOARD" in output
-    lines = [l for l in output.splitlines() if "@x.com" in l and "Design review" not in l]
-    leaderboard = [l for l in lines if l.strip().split()[0].isdigit()]
-    assert "stressor@x.com" in leaderboard[0]
-    assert "calm@x.com" in leaderboard[1]
-    assert "prime suspect" in leaderboard[0] or "raises HR" in leaderboard[0]
+    board = render_board(
+        stats, title="PER-PERSON", subtitle="test", lam=1.0, min_meetings=3, pal=pal
+    )
+    rows = [l for l in board.splitlines() if l.strip().startswith(("stressor", "calm"))]
+    assert rows[0].strip().startswith("stressor")
+    assert rows[1].strip().startswith("calm")
+    assert "prime suspect" in rows[0] or "raises HR" in rows[0]

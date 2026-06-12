@@ -47,6 +47,20 @@ def merge_samples(cache_dir: Path, samples: list[SampleMs]) -> dict[date, int]:
     return {day: merge_day(cache_dir, day, day_samples) for day, day_samples in by_day.items()}
 
 
+def day_counts(cache_dir: Path, days: int) -> list[tuple[date, int]]:
+    """Per-day sample counts for the last `days` days, oldest first."""
+    today = date.today()
+    counts = []
+    for offset in range(days - 1, -1, -1):
+        day = today - timedelta(days=offset)
+        path = day_path(cache_dir, day)
+        n = 0
+        if path.exists():
+            n = sum(1 for _, hr in json.loads(path.read_text()) if hr is not None)
+        counts.append((day, n))
+    return counts
+
+
 def load_samples(cache_dir: Path, days: int) -> list[tuple[float, float]]:
     """Load cached samples for the last `days` days as (epoch seconds, bpm)."""
     samples = []

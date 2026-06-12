@@ -78,6 +78,8 @@ non-interactive. HR data is cached per day, so re-fetching is cheap — run
 
 Report options: `--top N` (meetings shown), `--ridge-lambda X`,
 `--min-meetings N` (minimum shared meetings to appear on the board).
+The report is colored when on a TTY (respects `NO_COLOR`) and also writes
+`data/meeting_scores.csv` and `data/person_scores.csv` with the full numbers.
 
 ## How the scoring works
 

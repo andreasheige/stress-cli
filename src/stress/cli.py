@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
 
-from . import calendars, hrcache, messages, providers
+from . import calendars, hrcache, messages, providers, report
 from .analysis import compute_stats
 from .config import load_config
 from .providers import slack
-from .report import render, render_messages
+from .report import Palette
 
 DEFAULT_DAYS = 30
 
@@ -92,22 +93,56 @@ def cmd_report(args: argparse.Namespace) -> None:
     if not samples:
         sys.exit("No heart-rate data cached — run `stress fetch` first.")
 
+    pal = Palette(sys.stdout.isatty() and "NO_COLOR" not in os.environ)
     stats = compute_stats(meetings, samples, extra_busy=busy_only)
-    attendee_count = len({a for m in meetings for a in m.attendees})
-    print(
-        f"STRESS REPORT — last {args.days} days · {len(meetings)} meetings "
-        f"(+{len(busy_only)} without attendee info), "
-        f"{len(stats)} scored (HR coverage) · {attendee_count} attendees · "
-        f"{len(samples)} HR samples\n"
-    )
-    print(render(stats, lam=args.ridge_lambda, min_meetings=args.min_meetings, top=args.top))
 
     cached_msgs = messages.load_messages(cfg.data_dir, args.days)
-    if cached_msgs:
-        events = messages.to_events(cached_msgs, past)
-        msg_stats = compute_stats(events, samples, extra_busy=past)
+    events = messages.to_events(cached_msgs, past) if cached_msgs else []
+    msg_stats = compute_stats(events, samples, extra_busy=past) if events else []
+
+    print(
+        report.render_intro(
+            hrcache.day_counts(cfg.data_dir / "hr", args.days),
+            days=args.days,
+            n_meetings=len(meetings),
+            n_attendees=len({a for m in meetings for a in m.attendees}),
+            n_busy=len(busy_only),
+            n_messages=len(cached_msgs),
+            lam=args.ridge_lambda,
+            pal=pal,
+        )
+    )
+    print()
+    print(report.render_meetings(stats, top=args.top, pal=pal))
+    print()
+    print(
+        report.render_board(
+            stats,
+            title="PER-PERSON",
+            subtitle="ranked by ridge marginal effect (bpm)",
+            lam=args.ridge_lambda,
+            min_meetings=args.min_meetings,
+            pal=pal,
+        )
+    )
+    if msg_stats:
         print()
-        print(render_messages(msg_stats, lam=args.ridge_lambda, min_meetings=args.min_meetings))
+        print(
+            report.render_board(
+                msg_stats,
+                title="SLACK SENDERS",
+                subtitle="HR effect in the 10 min after a message (outside meetings)",
+                lam=args.ridge_lambda,
+                min_meetings=args.min_meetings,
+                pal=pal,
+            )
+        )
+    paths = report.write_csvs(
+        stats, msg_stats, lam=args.ridge_lambda,
+        min_meetings=args.min_meetings, out_dir=cfg.data_dir,
+    )
+    print()
+    print(pal.paint(f"wrote {', '.join(str(p) for p in paths)}", report.GREY))
 
 
 def main() -> None:

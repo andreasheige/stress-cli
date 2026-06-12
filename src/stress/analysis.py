@@ -9,7 +9,7 @@ is separated from co-attendance confounding.
 from __future__ import annotations
 
 from collections import Counter
-from statistics import mean
+from statistics import mean, pstdev
 
 import numpy as np
 
@@ -60,6 +60,7 @@ def compute_stats(
                 mean_hr=mean(inside),
                 baseline_hr=mean(baseline),
                 n_samples=len(inside),
+                baseline_std=pstdev(baseline),
             )
         )
     return stats

@@ -28,6 +28,7 @@ class MeetingStat:
     mean_hr: float
     baseline_hr: float
     n_samples: int
+    baseline_std: float = 0.0
 
     @property
     def elevation(self) -> float:
@@ -36,3 +37,8 @@ class MeetingStat:
     @property
     def rel_elevation(self) -> float:
         return self.elevation / self.baseline_hr
+
+    @property
+    def z(self) -> float:
+        """Elevation in units of baseline variability."""
+        return self.elevation / self.baseline_std if self.baseline_std > 1e-9 else 0.0
