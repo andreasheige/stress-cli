@@ -7,6 +7,8 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import requests
+
 from . import calendars, hrcache, messages, providers
 from .analysis import compute_stats
 from .config import load_config
@@ -22,7 +24,13 @@ def cmd_fetch(args: argparse.Namespace) -> None:
     cal_dir.mkdir(parents=True, exist_ok=True)
     print(f"Fetching {len(cfg.calendars)} calendar feed(s)...")
     for i, source in enumerate(cfg.calendars):
-        feed = calendars.load_ics(source)
+        try:
+            feed = calendars.load_ics(source)
+        except (OSError, requests.RequestException) as exc:
+            cached = (cal_dir / f"cal_{i}.ics").exists()
+            note = "keeping cached copy" if cached else "no cached copy — feed will be missing"
+            print(f"  calendar {i}: FAILED ({exc}) — {note}")
+            continue
         (cal_dir / f"cal_{i}.ics").write_bytes(feed)
         print(f"  calendar {i}: {len(feed) // 1024} KiB")
 
@@ -33,15 +41,18 @@ def cmd_fetch(args: argparse.Namespace) -> None:
             f"Provider '{cfg.provider}' has no API fetcher (available: {supported}).\n"
             "For Apple Watch / Suunto / Polar, use `stress import` with exported files."
         )
+    if cfg.slack_token:
+        print(f"Fetching Slack DMs/@mentions for the last {args.days} days...")
+        try:
+            fetched_msgs = slack.fetch_messages(cfg.slack_token, args.days)
+            total = messages.merge_messages(cfg.data_dir, fetched_msgs)
+            print(f"  {len(fetched_msgs)} messages fetched, {total} cached in total.")
+        except (RuntimeError, requests.RequestException) as exc:
+            print(f"  Slack FAILED ({exc}) — continuing without messages.")
+
     print(f"Fetching {cfg.provider} heart rate for the last {args.days} days...")
     fetched = fetcher(args.days, cfg.data_dir / "hr")
     print(f"Done — {fetched} day(s) fetched, rest already cached.")
-
-    if cfg.slack_token:
-        print(f"Fetching Slack DMs/@mentions for the last {args.days} days...")
-        fetched_msgs = slack.fetch_messages(cfg.slack_token, args.days)
-        total = messages.merge_messages(cfg.data_dir, fetched_msgs)
-        print(f"  {len(fetched_msgs)} messages fetched, {total} cached in total.")
 
 
 def cmd_import(args: argparse.Namespace) -> None:
