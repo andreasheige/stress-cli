@@ -5,7 +5,7 @@ from your watch against your calendar events and attendees, scores each
 meeting's HR elevation vs. its local baseline, and fits a ridge regression
 over attendee presence to build a per-person stress leaderboard.
 
-Inspired by [@the2ndfloorguy's Whoop experiment](https://x.com/the2ndfloorguy).
+Inspired by [@the2ndfloorguy's](https://x.com/the2ndfloorguy) [Whoop experiment](https://indianexpress.com/article/trending/trending-in-india/bengaluru-techie-whoop-tracker-coworker-stress-10734618/)
 
 ## Supported watches
 
