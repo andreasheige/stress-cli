@@ -5,8 +5,9 @@ from __future__ import annotations
 import argparse
 import sys
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
-from . import calendars, garmin
+from . import calendars, hrcache, providers
 from .analysis import compute_stats
 from .config import load_config
 from .report import render
@@ -24,10 +25,28 @@ def cmd_fetch(args: argparse.Namespace) -> None:
         (cal_dir / f"cal_{i}.ics").write_bytes(feed)
         print(f"  calendar {i}: {len(feed) // 1024} KiB")
 
-    print(f"Fetching Garmin heart rate for the last {args.days} days...")
-    client = garmin.get_client()
-    fetched = garmin.fetch_hr_days(client, args.days, cfg.data_dir / "hr")
+    fetcher = providers.FETCHERS.get(cfg.provider)
+    if fetcher is None:
+        supported = ", ".join(sorted(providers.FETCHERS))
+        sys.exit(
+            f"Provider '{cfg.provider}' has no API fetcher (available: {supported}).\n"
+            "For Apple Watch / Suunto / Polar, use `stress import` with exported files."
+        )
+    print(f"Fetching {cfg.provider} heart rate for the last {args.days} days...")
+    fetched = fetcher(args.days, cfg.data_dir / "hr")
     print(f"Done — {fetched} day(s) fetched, rest already cached.")
+
+
+def cmd_import(args: argparse.Namespace) -> None:
+    cfg = load_config()
+    for path in args.files:
+        samples = providers.import_file(Path(path))
+        if not samples:
+            print(f"  {path}: no heart-rate samples found")
+            continue
+        merged = hrcache.merge_samples(cfg.data_dir / "hr", samples)
+        days = f"{min(merged)} … {max(merged)}" if len(merged) > 1 else str(min(merged))
+        print(f"  {path}: {len(samples)} samples across {len(merged)} day(s) ({days})")
 
 
 def cmd_report(args: argparse.Namespace) -> None:
@@ -47,7 +66,7 @@ def cmd_report(args: argparse.Namespace) -> None:
     now_ts = window_end.timestamp()
     meetings = [m for m in meetings if m.attendees and m.end <= now_ts]
 
-    samples = garmin.load_samples(cfg.data_dir / "hr", args.days)
+    samples = hrcache.load_samples(cfg.data_dir / "hr", args.days)
     if not samples:
         sys.exit("No heart-rate data cached — run `stress fetch` first.")
 
@@ -67,9 +86,16 @@ def main() -> None:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    fetch = sub.add_parser("fetch", help="pull Garmin HR + calendar feeds into ./data")
+    fetch = sub.add_parser("fetch", help="pull HR (API providers) + calendar feeds into ./data")
     fetch.add_argument("--days", type=int, default=DEFAULT_DAYS)
     fetch.set_defaults(func=cmd_fetch)
+
+    imp = sub.add_parser(
+        "import",
+        help="import HR from exported files: Apple Health .zip/.xml, .fit, .tcx",
+    )
+    imp.add_argument("files", nargs="+", help="export files to import")
+    imp.set_defaults(func=cmd_import)
 
     cfg_defaults = load_config_defaults()
     report = sub.add_parser("report", help="print meeting stats and the leaderboard")

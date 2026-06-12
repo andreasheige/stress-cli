@@ -1,5 +1,10 @@
 # Copy to config.toml (gitignored) and fill in.
 
+# Watch with an API that `stress fetch` can pull from. Currently: "garmin".
+# Apple Watch / Suunto / Polar users: skip fetch and use `stress import`
+# with a Health export (.zip/.xml) or workout files (.fit/.tcx) instead.
+provider = "garmin"
+
 # Your own addresses — removed from attendee lists so you don't rank yourself.
 me = ["you@company.com", "you@gmail.com"]
 

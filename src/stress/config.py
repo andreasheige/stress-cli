@@ -16,6 +16,7 @@ CONFIG_PATH = Path("config.toml")
 class Config:
     calendars: list[str]
     my_emails: set[str]
+    provider: str = "garmin"
     lam: float = DEFAULT_LAMBDA
     min_meetings: int = DEFAULT_MIN_MEETINGS
     data_dir: Path = field(default_factory=lambda: Path("data"))
@@ -35,6 +36,7 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
     return Config(
         calendars=calendars,
         my_emails={e.lower() for e in raw.get("me", [])},
+        provider=raw.get("provider", "garmin"),
         lam=float(analysis.get("lambda", DEFAULT_LAMBDA)),
         min_meetings=int(analysis.get("min_meetings", DEFAULT_MIN_MEETINGS)),
     )

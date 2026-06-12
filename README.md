@@ -1,11 +1,27 @@
 # stress
 
-Which coworker spikes your heart rate? Matches per-minute Garmin heart-rate
-data against your calendar events and attendees, scores each meeting's HR
-elevation vs. its local baseline, and fits a ridge regression over attendee
-presence to build a per-person stress leaderboard.
+Which coworker spikes your heart rate? Matches per-minute heart-rate data
+from your watch against your calendar events and attendees, scores each
+meeting's HR elevation vs. its local baseline, and fits a ridge regression
+over attendee presence to build a per-person stress leaderboard.
 
 Inspired by [@the2ndfloorguy's Whoop experiment](https://x.com/the2ndfloorguy).
+
+## Supported watches
+
+| Watch | How | All-day HR? |
+|---|---|---|
+| Garmin | `stress fetch` (Garmin Connect API, login once) | yes |
+| Apple Watch | `stress import export.zip` (Health → "Export All Health Data") | yes |
+| Suunto | `stress import *.fit` (app activity export) | only recorded activities |
+| Polar | `stress import *.tcx` / `*.fit` (Flow export) | only recorded activities |
+| anything else | `stress import` any `.fit` / `.tcx` file | depends |
+
+Meeting analysis needs HR during the workday, so Garmin and Apple Health are
+the strong paths. FIT/TCX workout exports only cover recorded activities —
+useful if your watch records all-day or you log long activity sessions at
+your desk. A Polar AccessLink fetcher (continuous HR API) can be added if
+someone needs it.
 
 ## Setup
 
@@ -29,14 +45,18 @@ In `config.toml` you need:
 ## Usage
 
 ```bash
-uv run stress fetch --days 30    # pull Garmin HR + calendar feeds into ./data
-uv run stress report --days 30   # print meeting stats + the leaderboard
+uv run stress fetch --days 30      # pull HR (API providers) + calendar feeds into ./data
+uv run stress import export.zip    # or: import HR from exported files (.zip/.xml/.fit/.tcx)
+uv run stress report --days 30     # print meeting stats + the leaderboard
 ```
 
-First `fetch` asks for your Garmin Connect login (MFA supported); tokens are
-cached in `~/.garminconnect`, so subsequent runs are non-interactive.
-HR data is cached per day, so re-fetching is cheap — run `fetch` daily or
-weekly and `report` whenever you want the current standings.
+All sources merge into the same per-day cache (`data/hr/`), deduped by
+timestamp, so you can mix fetch and import freely.
+
+For Garmin, the first `fetch` asks for your Garmin Connect login (MFA
+supported); tokens are cached in `~/.garminconnect`, so subsequent runs are
+non-interactive. HR data is cached per day, so re-fetching is cheap — run
+`fetch` daily or weekly and `report` whenever you want the current standings.
 
 Report options: `--top N` (meetings shown), `--ridge-lambda X`,
 `--min-meetings N` (minimum shared meetings to appear on the board).
@@ -58,7 +78,7 @@ Report options: `--top N` (meetings shown), `--ridge-lambda X`,
 - HR elevation isn't only stress: walking to a meeting room, coffee, or
   presenting all raise HR. Treat the leaderboard as entertainment with a
   hint of signal, not a performance review input.
-- Garmin HR granularity is roughly one sample per 1–2 minutes; very short
+- All-day HR granularity is roughly one sample per 1–2 minutes; very short
   meetings may be skipped for having too few samples.
 - Outlook published calendars only include attendees at the
   "full details" permission level.

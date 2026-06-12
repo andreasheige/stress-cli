@@ -1,18 +1,19 @@
-"""Fetch per-day heart-rate series from Garmin Connect and cache as JSON."""
+"""Fetch per-day heart-rate series from Garmin Connect into the day cache."""
 
 from __future__ import annotations
 
-import json
 from datetime import date, timedelta
 from getpass import getpass
 from pathlib import Path
 
 from garminconnect import Garmin
 
+from .. import hrcache
+
 TOKEN_DIR = Path("~/.garminconnect").expanduser()
 
 
-def get_client() -> Garmin:
+def _get_client() -> Garmin:
     """Log in to Garmin Connect, reusing cached OAuth tokens when present."""
     try:
         client = Garmin()
@@ -37,36 +38,21 @@ def get_client() -> Garmin:
     return client
 
 
-def fetch_hr_days(client: Garmin, days: int, cache_dir: Path) -> int:
-    """Download HR for the last `days` days into cache_dir, skipping cached days.
+def fetch_days(days: int, cache_dir: Path) -> int:
+    """Download HR for the last `days` days into the cache, skipping cached days.
 
     Today is always refetched since its data is still growing.
     """
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    client = _get_client()
     today = date.today()
     fetched = 0
     for offset in range(days):
         day = today - timedelta(days=offset)
-        path = cache_dir / f"{day.isoformat()}.json"
-        if path.exists() and day != today:
+        if hrcache.day_path(cache_dir, day).exists() and day != today:
             continue
         data = client.get_heart_rates(day.isoformat())
         values = (data or {}).get("heartRateValues") or []
-        path.write_text(json.dumps(values))
+        count = hrcache.merge_day(cache_dir, day, values)
         fetched += 1
-        print(f"  {day} — {len(values)} HR samples")
+        print(f"  {day} — {count} HR samples")
     return fetched
-
-
-def load_samples(cache_dir: Path, days: int) -> list[tuple[float, float]]:
-    """Load cached HR samples for the last `days` days as (epoch s, bpm)."""
-    samples = []
-    today = date.today()
-    for offset in range(days):
-        path = cache_dir / f"{(today - timedelta(days=offset)).isoformat()}.json"
-        if not path.exists():
-            continue
-        for ts_ms, hr in json.loads(path.read_text()):
-            if hr is not None:
-                samples.append((ts_ms / 1000, float(hr)))
-    return sorted(samples)
