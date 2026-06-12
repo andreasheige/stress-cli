@@ -458,6 +458,7 @@ dependencies = [
     { name = "icalendar" },
     { name = "numpy" },
     { name = "recurring-ical-events" },
+    { name = "requests" },
 ]
 
 [package.dev-dependencies]
@@ -472,6 +473,7 @@ requires-dist = [
     { name = "icalendar", specifier = ">=7.1.2" },
     { name = "numpy", specifier = ">=2.4.6" },
     { name = "recurring-ical-events", specifier = ">=3.8.2" },
+    { name = "requests", specifier = ">=2.34.2" },
 ]
 
 [package.metadata.requires-dev]

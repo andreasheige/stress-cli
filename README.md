@@ -23,6 +23,22 @@ useful if your watch records all-day or you log long activity sessions at
 your desk. A Polar AccessLink fetcher (continuous HR API) can be added if
 someone needs it.
 
+## Slack messages (optional)
+
+Beyond meetings, the tool can rank people by what your heart rate does in
+the 10 minutes after they DM or @mention you (outside meetings). Create a
+personal Slack app at api.slack.com/apps, add user token scopes `im:read`,
+`im:history`, `search:read`, `users:read`, `users:read.email`, install it to
+your workspace, and put the user token (`xoxp-…`) in `config.toml` under
+`[slack]` or in the `SLACK_TOKEN` env var. `stress fetch` then also pulls
+messages (timestamps and senders only — message text is never stored) and
+`stress report` shows a separate Slack leaderboard.
+
+Microsoft Teams isn't supported: reading your chats requires a Microsoft
+Graph app registration in your company's Azure tenant, which is usually
+IT-gated. If you can get such a registration, a Teams fetcher would slot
+into the same message pipeline.
+
 ## Setup
 
 ```bash

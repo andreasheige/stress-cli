@@ -7,10 +7,11 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import calendars, hrcache, providers
+from . import calendars, hrcache, messages, providers
 from .analysis import compute_stats
 from .config import load_config
-from .report import render
+from .providers import slack
+from .report import render, render_messages
 
 DEFAULT_DAYS = 30
 
@@ -35,6 +36,12 @@ def cmd_fetch(args: argparse.Namespace) -> None:
     print(f"Fetching {cfg.provider} heart rate for the last {args.days} days...")
     fetched = fetcher(args.days, cfg.data_dir / "hr")
     print(f"Done — {fetched} day(s) fetched, rest already cached.")
+
+    if cfg.slack_token:
+        print(f"Fetching Slack DMs/@mentions for the last {args.days} days...")
+        fetched_msgs = slack.fetch_messages(cfg.slack_token, args.days)
+        total = messages.merge_messages(cfg.data_dir, fetched_msgs)
+        print(f"  {len(fetched_msgs)} messages fetched, {total} cached in total.")
 
 
 def cmd_import(args: argparse.Namespace) -> None:
@@ -78,6 +85,13 @@ def cmd_report(args: argparse.Namespace) -> None:
         f"{len(samples)} HR samples\n"
     )
     print(render(stats, lam=args.ridge_lambda, min_meetings=args.min_meetings, top=args.top))
+
+    cached_msgs = messages.load_messages(cfg.data_dir, args.days)
+    if cached_msgs:
+        events = messages.to_events(cached_msgs, meetings)
+        msg_stats = compute_stats(events, samples, extra_busy=meetings)
+        print()
+        print(render_messages(msg_stats, lam=args.ridge_lambda, min_meetings=args.min_meetings))
 
 
 def main() -> None:

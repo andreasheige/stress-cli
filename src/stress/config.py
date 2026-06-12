@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import tomllib
 from dataclasses import dataclass, field
@@ -17,6 +18,7 @@ class Config:
     calendars: list[str]
     my_emails: set[str]
     provider: str = "garmin"
+    slack_token: str | None = None
     lam: float = DEFAULT_LAMBDA
     min_meetings: int = DEFAULT_MIN_MEETINGS
     data_dir: Path = field(default_factory=lambda: Path("data"))
@@ -37,6 +39,7 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         calendars=calendars,
         my_emails={e.lower() for e in raw.get("me", [])},
         provider=raw.get("provider", "garmin"),
+        slack_token=raw.get("slack", {}).get("token") or os.environ.get("SLACK_TOKEN"),
         lam=float(analysis.get("lambda", DEFAULT_LAMBDA)),
         min_meetings=int(analysis.get("min_meetings", DEFAULT_MIN_MEETINGS)),
     )

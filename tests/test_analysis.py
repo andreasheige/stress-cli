@@ -58,6 +58,19 @@ class TestComputeStats:
 
         assert compute_stats([meeting], samples) == []
 
+    def test_extra_busy_intervals_excluded_from_baseline(self):
+        # Scoring message events: a real meeting near the event must not
+        # leak its elevated HR into the event's baseline.
+        event = mk_meeting(10, 10.5, {"a@x.com"}, uid="event")
+        meeting = mk_meeting(11, 12, {"b@x.com"}, uid="mtg")
+        samples = (
+            flat_samples(9, 10, 60) + flat_samples(10, 10.5, 80) + flat_samples(11, 12, 110)
+        )
+
+        stats = compute_stats([event], samples, extra_busy=[meeting])
+
+        assert stats[0].baseline_hr == 60
+
     def test_skips_meetings_without_baseline_coverage(self):
         # HR data only exists during the meeting (e.g., watch off before/after).
         meeting = mk_meeting(10, 11, {"a@x.com"})

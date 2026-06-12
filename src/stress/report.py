@@ -54,18 +54,34 @@ def render(stats: list[MeetingStat], *, lam: float, min_meetings: int, top: int)
 
     out("")
     out(f"LEADERBOARD — marginal HR effect per person (ridge λ={lam:g})")
-    out(f"  {'#':>2}  {'person':<34} {'ridge':>6}  {'naive':>6}  {'n':>3}")
+    lines.extend(_leaderboard(stats, lam=lam, min_meetings=min_meetings, unit="meetings"))
+
+    return "\n".join(lines)
+
+
+def render_messages(stats: list[MeetingStat], *, lam: float, min_meetings: int) -> str:
+    lines = [
+        "SLACK — HR effect in the minutes after someone messages you (outside meetings)",
+        f"  scored {len(stats)} message event(s)",
+    ]
+    lines.extend(_leaderboard(stats, lam=lam, min_meetings=min_meetings, unit="message events"))
+    return "\n".join(lines)
+
+
+def _leaderboard(
+    stats: list[MeetingStat], *, lam: float, min_meetings: int, unit: str
+) -> list[str]:
+    lines = [f"  {'#':>2}  {'person':<34} {'ridge':>6}  {'naive':>6}  {'n':>3}"]
     ridge = ridge_scores(stats, lam=lam, min_meetings=min_meetings)
     naive = naive_scores(stats, min_meetings=min_meetings)
     board = sorted(ridge.items(), key=lambda kv: kv[1], reverse=True)
     max_ridge = max((abs(v) for _, v in board), default=0)
     for rank, (person, score) in enumerate(board, start=1):
         naive_mean, n = naive[person]
-        out(
+        lines.append(
             f"  {rank:>2}  {_short(person, 34):<34} {score:+6.2f}  {naive_mean:+6.2f}  {n:>3}"
             f"  {_bar(score, max_ridge):<{BAR_MAX_WIDTH}} {_verdict(score)}"
         )
     if not board:
-        out(f"  (no one has ≥{min_meetings} scored meetings yet — try --min-meetings 1)")
-
-    return "\n".join(lines)
+        lines.append(f"  (no one has ≥{min_meetings} scored {unit} yet — try --min-meetings 1)")
+    return lines

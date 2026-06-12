@@ -35,8 +35,14 @@ def compute_stats(
     baseline_pad: float = BASELINE_PAD_S,
     min_meeting_samples: int = MIN_MEETING_SAMPLES,
     min_baseline_samples: int = MIN_BASELINE_SAMPLES,
+    extra_busy: list[Meeting] = (),
 ) -> list[MeetingStat]:
-    """Score each meeting's mean HR against its surrounding non-meeting baseline."""
+    """Score each meeting's mean HR against its surrounding non-meeting baseline.
+
+    `extra_busy` intervals are excluded from baselines without being scored —
+    e.g. real meetings while scoring message events.
+    """
+    busy = [*meetings, *extra_busy]
     stats = []
     for m in meetings:
         inside = [hr for ts, hr in samples if m.start <= ts < m.end]
@@ -44,7 +50,7 @@ def compute_stats(
             hr
             for ts, hr in samples
             if (m.start - baseline_pad <= ts < m.start or m.end <= ts < m.end + baseline_pad)
-            and not _in_any_meeting(ts, meetings)
+            and not _in_any_meeting(ts, busy)
         ]
         if len(inside) < min_meeting_samples or len(baseline) < min_baseline_samples:
             continue

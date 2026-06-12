@@ -16,6 +16,13 @@ calendars = [
     "https://outlook.office365.com/owa/calendar/.../calendar.ics",
 ]
 
+# Optional: also rank people by the HR effect of their Slack DMs/@mentions.
+# Create a personal app at api.slack.com/apps with user token scopes
+# im:read, im:history, search:read, users:read, users:read.email,
+# then put the user token (xoxp-…) here or in the SLACK_TOKEN env var.
+# [slack]
+# token = "xoxp-..."
+
 [analysis]
 # Ridge regularization strength; raise it if scores look unstable.
 lambda = 1.0
