@@ -10,3 +10,5 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 dist/
+.vscode/settings.json
+.vscode/diff/vulsCount.txt
